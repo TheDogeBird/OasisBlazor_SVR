@@ -1,44 +1,108 @@
 ﻿using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
+using OasisBlazor.Services;
+using OasisBlazor_SVR.Models;
 
 namespace OasisBlazor_SVR.Services
 {
     public class ApiServices : IApiService
     {
         private readonly HttpClient _httpClient;
-        private readonly IConfiguration _configuration;
+        private readonly string _baseUrl;
 
-        public ApiServices(HttpClient httpClient, IConfiguration configuration)
+        public ApiServices(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _configuration = configuration;
+            _baseUrl = "https://localhost:5001/api/";
         }
 
-        public async Task Register(string email, string password, string firstName, string lastName, int age, string country, string gender, string username)
+        public async Task<LoginResult> Login(LoginModel loginModel)
         {
-            var requestUrl = _configuration.GetValue<string>("ApiBaseUrl") + "api/account/register";
+            var content = new StringContent(JsonSerializer.Serialize(loginModel), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{_baseUrl}identity/login", content);
 
-            var requestBody = new
+            if (response.IsSuccessStatusCode)
             {
-                email = email,
-                password = password,
-                firstName = firstName,
-                lastName = lastName,
-                age = age,
-                country = country,
-                gender = gender,
-                username = username
-            };
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var loginResult = JsonSerializer.Deserialize<LoginResult>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return loginResult;
+            }
 
-            var json = JsonConvert.SerializeObject(requestBody);
-            var data = new StringContent(json, Encoding.UTF8, "application/json");
+            return new LoginResult { Successful = false };
+        }
 
-            var response = await _httpClient.PostAsync(requestUrl, data);
+        public async Task Logout()
+        {
+            await _httpClient.PostAsync($"{_baseUrl}identity/logout", null);
+        }
 
-            response.EnsureSuccessStatusCode();
+        public async Task<RegisterResult> Register(RegisterModel registerModel)
+        {
+            var content = new StringContent(JsonSerializer.Serialize(registerModel), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{_baseUrl}identity/register", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var registerResult = JsonSerializer.Deserialize<RegisterResult>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return registerResult;
+            }
+
+            return new RegisterResult { Successful = false };
+        }
+
+        public async Task<Product[]> GetProducts()
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}product");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var products = JsonSerializer.Deserialize<Product[]>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return products;
+            }
+
+            return new Product[] { };
+        }
+
+        public async Task<Product> GetProduct(int id)
+        {
+            var response = await _httpClient.GetAsync($"{_baseUrl}product/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var product = JsonSerializer.Deserialize<Product>(responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return product;
+            }
+
+            return null;
+        }
+
+        public async Task<bool> AddProduct(Product product)
+        {
+            var content = new StringContent(JsonSerializer.Serialize(product), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync($"{_baseUrl}product", content);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> UpdateProduct(int id, Product product)
+        {
+            var content = new StringContent(JsonSerializer.Serialize(product), Encoding.UTF8, "application/json");
+            var response = await _httpClient.PutAsync($"{_baseUrl}product/{id}", content);
+
+            return response.IsSuccessStatusCode;
+        }
+
+        public async Task<bool> DeleteProduct(int id)
+        {
+            var response = await _httpClient.DeleteAsync($"{_baseUrl}product/{id}");
+
+            return response.IsSuccessStatusCode;
         }
     }
 }
