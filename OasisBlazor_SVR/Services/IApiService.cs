@@ -1,15 +1,22 @@
-﻿using OasisBlazor_SVR.Models;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using OasisBlazor_SVR.Areas.Identity.Pages;
+using OasisBlazor.Models;
 
-namespace OasisBlazor_SVR.Services
+namespace OasisBlazor.Services
 {
     public interface IApiService
     {
-        Task<IEnumerable<UserProfile>> GetAllUserProfilesAsync();
-        Task<UserProfile> GetUserProfileAsync(int id);
-        Task<UserProfile> CreateUserAsync(UserProfile userProfile);
-        Task<UserProfile> UpdateUserProfileAsync(int id, UserProfile userProfile);
-        Task DeleteUserProfileAsync(int id);
+        // Authentication
+        Task<LoginResult> Login(LoginModel loginModel);
+        Task Logout();
+        Task<LoginResult> Register(RegisterModel registerModel);
+
+        // Products
+        Task<List<Product>> GetProducts();
+        Task<Product> GetProduct(int id);
+        Task AddProduct(Product product);
+        Task UpdateProduct(int id, Product product);
+        Task DeleteProduct(int id);
     }
 }

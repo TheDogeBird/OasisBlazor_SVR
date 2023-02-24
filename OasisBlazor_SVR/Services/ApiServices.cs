@@ -1,106 +1,44 @@
-﻿using OasisBlazor_SVR.Models;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace OasisBlazor_SVR.Services
 {
-    public class ApiService : IApiService
+    public class ApiServices : IApiService
     {
         private readonly HttpClient _httpClient;
+        private readonly IConfiguration _configuration;
 
-        public ApiService(HttpClient httpClient)
+        public ApiServices(HttpClient httpClient, IConfiguration configuration)
         {
             _httpClient = httpClient;
+            _configuration = configuration;
         }
 
-        public async Task<IEnumerable<UserProfile>> GetAllUserProfilesAsync()
+        public async Task Register(string email, string password, string firstName, string lastName, int age, string country, string gender, string username)
         {
-            var response = await _httpClient.GetAsync("https://your-api.com/userprofiles");
+            var requestUrl = _configuration.GetValue<string>("ApiBaseUrl") + "api/account/register";
 
-            if (response.IsSuccessStatusCode)
+            var requestBody = new
             {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var userProfiles = JsonSerializer.Deserialize<IEnumerable<UserProfile>>(responseContent, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
+                email = email,
+                password = password,
+                firstName = firstName,
+                lastName = lastName,
+                age = age,
+                country = country,
+                gender = gender,
+                username = username
+            };
 
-                return userProfiles;
-            }
+            var json = JsonConvert.SerializeObject(requestBody);
+            var data = new StringContent(json, Encoding.UTF8, "application/json");
 
-            throw new Exception("Failed to get user profiles");
-        }
+            var response = await _httpClient.PostAsync(requestUrl, data);
 
-        public async Task<UserProfile> GetUserProfileAsync(int id)
-        {
-            var response = await _httpClient.GetAsync($"https://your-api.com/userprofiles/{id}");
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var userProfile = JsonSerializer.Deserialize<UserProfile>(responseContent, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
-                return userProfile;
-            }
-
-            throw new Exception("Failed to get user profile");
-        }
-
-        public async Task<UserProfile> CreateUserAsync(UserProfile userProfile)
-        {
-            var userProfileJson = JsonSerializer.Serialize(userProfile);
-            var content = new StringContent(userProfileJson, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync("https://your-api.com/userprofiles", content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var createdUserProfile = JsonSerializer.Deserialize<UserProfile>(responseContent, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
-                return createdUserProfile;
-            }
-
-            throw new Exception("Failed to create user profile");
-        }
-
-        public async Task<UserProfile> UpdateUserProfileAsync(int id, UserProfile userProfile)
-        {
-            var userProfileJson = JsonSerializer.Serialize(userProfile);
-            var content = new StringContent(userProfileJson, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PutAsync($"https://your-api.com/userprofiles/{id}", content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var updatedUserProfile = JsonSerializer.Deserialize<UserProfile>(responseContent, new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                });
-
-                return updatedUserProfile;
-            }
-
-            throw new Exception("Failed to update user profile");
-        }
-
-        public async Task DeleteUserProfileAsync(int id)
-        {
-            var response = await _httpClient.DeleteAsync($"https://your-api.com/userprofiles/{id}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception("Failed to delete user profile");
-            }
+            response.EnsureSuccessStatusCode();
         }
     }
 }
